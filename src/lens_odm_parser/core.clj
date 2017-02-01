@@ -331,16 +331,30 @@
   :args (s/cat :odm-file ::element)
   :ret ::file)
 
+(defn- assoc-ex-data
+  "Assocs keys and vals to ex-data of e."
+  [e key val & kvs]
+  (ex-info (.getMessage e) (apply assoc (ex-data e) key val kvs)))
+
 (defn parse-odm-file
   "Parses a ODM file from its root element.
 
   Throws an exception with :type ::validation-error and other keys like
   :element :value and :error in ex-data."
   [odm-file]
-  (-> {:file-type (file-type odm-file)
-       :file-oid (oid odm-file :FileOID)
-       :creation-date-time (creation-date-time odm-file)}
-      (assoc-when :clinical-data (parse-clinical-data odm-file))))
+  (let [file-oid (oid odm-file :FileOID)
+        clinical-data
+        (try
+          (parse-clinical-data odm-file)
+          (catch Exception e
+            (case (:type (ex-data e))
+              ::validation-error
+              (throw (assoc-ex-data e :odm/file-oid file-oid))
+              (throw e))))]
+    (cond-> {:file-type (file-type odm-file)
+             :file-oid file-oid
+             :creation-date-time (creation-date-time odm-file)}
+            clinical-data (assoc :clinical-data clinical-data))))
 
 ;; ---- Unparsing -------------------------------------------------------------
 

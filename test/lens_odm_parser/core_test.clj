@@ -275,24 +275,36 @@
     (= clinical-datum (parse-clinical-datum (element (unparse-clinical-datum "x" clinical-datum))))))
 
 (deftest parse-odm-file-test
-  (are [sexp odm-file] (= odm-file (parse-odm-file (element sexp)))
-    [:ODM
-     {:FileType "Snapshot"
-      :FileOID "F1"
-      :CreationDateTime "2016-03-18T14:41:00Z"}]
-    {:file-type :snapshot
-     :file-oid "F1"
-     :creation-date-time #inst "2016-03-18T14:41:00Z"}
+  (testing "success"
+    (are [sexp odm-file] (= odm-file (parse-odm-file (element sexp)))
+      [:ODM
+       {:FileType "Snapshot"
+        :FileOID "F1"
+        :CreationDateTime "2016-03-18T14:41:00Z"}]
+      {:file-type :snapshot
+       :file-oid "F1"
+       :creation-date-time #inst "2016-03-18T14:41:00Z"}
 
-    [:ODM
-     {:FileType "Snapshot"
-      :FileOID "F1"
-      :CreationDateTime "2016-03-18T14:41:00Z"}
-     [:ClinicalData {:StudyOID "S1"}]]
-    {:file-type :snapshot
-     :file-oid "F1"
-     :creation-date-time #inst "2016-03-18T14:41:00Z"
-     :clinical-data {"S1" {}}}))
+      [:ODM
+       {:FileType "Snapshot"
+        :FileOID "F1"
+        :CreationDateTime "2016-03-18T14:41:00Z"}
+       [:ClinicalData {:StudyOID "S1"}]]
+      {:file-type :snapshot
+       :file-oid "F1"
+       :creation-date-time #inst "2016-03-18T14:41:00Z"
+       :clinical-data {"S1" {}}}))
+
+  (testing ""
+    (->> [:ODM
+          {:FileType "Snapshot"
+           :FileOID "F1"
+           :CreationDateTime "2016-03-18T14:41:00Z"}
+          [:ClinicalData {:StudyOID ""}]]
+         (element)
+         (parse-odm-file)
+         (thrown-with-msg? Exception #"Invalid value")
+         (is))))
 
 (defspec odm-file-parse-unparse-check 1
   (prop/for-all [file (s/gen ::p/file)]
